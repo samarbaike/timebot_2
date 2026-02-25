@@ -29,3 +29,5 @@ class DatabaseManager:
         
         async with self.pool.acquire() as connection:
             await connection.execute(query, telegram_id, user_name, pages_read)
+
+    async def get_total_pages(self, telegram_id:)
