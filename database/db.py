@@ -30,4 +30,10 @@ class DatabaseManager:
         async with self.pool.acquire() as connection:
             await connection.execute(query, telegram_id, user_name, pages_read)
 
-    async def get_total_pages(self, telegram_id:)
+    async def get_total_pages(self, telegram_id: int):
+        query = """
+        SELECT SUM(pages_read) FROM reading_logs WHERE telegram_id = $1"""
+        async with self.pool.acquire() as connection:
+            total = await connection.fetchval(query, telegram_id)
+
+        return total
