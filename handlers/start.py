@@ -46,3 +46,26 @@ async def process_page(message: Message, state: FSMContext, database: DatabaseMa
 
     else:
         await message.answer("Please insert proper number of pages")
+
+@router.message(F.text == "Меники👤")
+async def show_progress(message: Message, database: DatabaseManager):
+    records = await database.logs.get(message.from_user.id)
+
+    if not records:
+        await message.answer("Сиз али бет киргизбептирсиз")
+        return
+    
+    response_text = "**Сиздин окуу тарыхыңыз:**\n\n"
+    total_pages = 0
+    
+    for row in records:
+        date_str = row['log_date'].strftime("%Y-%m-%d")
+        pages = row['pages_read']
+        total_pages+=pages
+
+        response_text+=f"{date_str}: {pages} бет\n"
+
+    response_text+=f"\n **Жалпы:** {total_pages} бет"
+
+    await message.answer(response_text, parse_mode="Markdown")
+

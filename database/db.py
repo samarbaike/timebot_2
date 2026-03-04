@@ -53,11 +53,11 @@ class LogRepository(BaseRepository):
             await connection.execute(query, telegram_id, pages_read)
     async def get(self, telegram_id: int):
         query = """
-        SELECT SUM(pages_read) FROM reading_logs WHERE telegram_id = $1"""
+        SELECT log_date, pages_read FROM reading_logs WHERE telegram_id = $1 ORDER BY log_date DESC"""
         async with self._pool.acquire() as connection:
-            total = await connection.fetchval(query, telegram_id)
+            records = await connection.fetch(query, telegram_id)
 
-        return total
+        return records
 
 
 class DatabaseManager:
