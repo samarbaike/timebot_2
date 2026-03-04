@@ -115,4 +115,3 @@ class DatabaseManager:
             """
         async with self.pool.acquire() as connection:
             await connection.execute(query)
-

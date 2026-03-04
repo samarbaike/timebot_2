@@ -1,12 +1,11 @@
 from aiogram import F
 from aiogram import Router
 from aiogram.filters import CommandStart
-from aiogram.types import Message
+from aiogram.types import Message, LinkPreviewOptions
 from aiogram.fsm.context import FSMContext
 from services.states import ReadingTracker
 from database.db import DatabaseManager
 from keyboard import main_keyboard
-
 router = Router()
 
 @router.message(CommandStart())
@@ -69,3 +68,13 @@ async def show_progress(message: Message, database: DatabaseManager):
 
     await message.answer(response_text, parse_mode="Markdown")
 
+@router.message(F.text == "Жалпы📈")
+async def hyperlink(message: Message):
+    sheet_url = "https://docs.google.com/spreadsheets/d/14bOLSsLN2cQGG_YpGhfGaleeLSJt5YhXu3LzM6Exqv8/edit?usp=sharing"
+    response_text = f"📊 [Жалпы абал]({sheet_url})"
+    
+    await message.answer(
+        response_text, 
+        parse_mode="Markdown", 
+        link_preview_options=LinkPreviewOptions(is_disabled=True)
+    )
