@@ -1,3 +1,5 @@
+import datetime
+from zoneinfo import ZoneInfo
 from abc import ABC, abstractmethod
 import asyncpg
 
@@ -43,14 +45,15 @@ class LogRepository(BaseRepository):
     Inherits from BaseRepository, managing reading_logs table
     """
     async def add(self, telegram_id: int, pages_read: int):
+        local_date = datetime.datetime.now(ZoneInfo('Asia/Bishkek')).date()
         query = """
-        INSERT INTO reading_logs(telegram_id, pages_read)
-        VALUES ($1, $2)
+        INSERT INTO reading_logs(telegram_id, log_date, pages_read)
+        VALUES ($1, $2, $3)
         ON CONFLICT (telegram_id, log_date)
         DO UPDATE SET pages_read = reading_logs.pages_read + EXCLUDED.pages_read"""
         
         async with self._pool.acquire() as connection:
-            await connection.execute(query, telegram_id, pages_read)
+            await connection.execute(query, telegram_id,local_date, pages_read)
     async def get(self, telegram_id: int):
         query = """
         SELECT log_date, pages_read FROM reading_logs WHERE telegram_id = $1 ORDER BY log_date DESC"""
@@ -59,6 +62,26 @@ class LogRepository(BaseRepository):
 
         return records
 
+class ReportRepository(BaseRepository):
+    """
+    This class takes all tables in ...
+    """
+    async def add(self):
+        raise NotImplementedError("ReportRepository is read-only")
+    async def get(self):
+        query="""
+        SELECT 
+            CONCAT(users.user_name, ' ', users.user_surname) AS full_name,
+            reading_logs.log_date,
+            reading_logs.pages_read
+        FROM users
+        INNER JOIN reading_logs 
+            ON users.telegram_id = reading_logs.telegram_id;
+        """
+        
+        async with self._pool.acquire() as connection:
+            merged = await connection.fetch(query)
+        return merged
 
 class DatabaseManager:
     def __init__(self):
@@ -67,13 +90,15 @@ class DatabaseManager:
         #Initializing repositories
         self.users: UserRepository | None = None
         self.logs: LogRepository | None = None
+        self.migration: ReportRepository | None = None
 
     async def connect(self, db_url: str):
         self.pool = await asyncpg.create_pool(db_url)
 
         self.users = UserRepository(self.pool)
         self.logs = LogRepository(self.pool)
-    
+        self.migration = ReportRepository(self.pool)
+
     async def create_table(self):
         query = """
         CREATE TABLE IF NOT EXISTS reading_logs (
@@ -90,3 +115,4 @@ class DatabaseManager:
             """
         async with self.pool.acquire() as connection:
             await connection.execute(query)
+
