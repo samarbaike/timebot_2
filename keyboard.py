@@ -2,9 +2,9 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 
 main_keyboard = ReplyKeyboardMarkup(
     keyboard=[
-        [KeyboardButton(text="Бет киргизүү📖")],
-        [KeyboardButton(text="Жалпы📈"), KeyboardButton(text="Меники👤")]
+        [KeyboardButton(text="Bet kirgizuu📖")],
+        [KeyboardButton(text="Zhalpy📈"), KeyboardButton(text="Meniki👤")]
     ],
     resize_keyboard=True,
-    input_field_placeholder="Эмне кылалы..."
+    input_field_placeholder="Emne kylaly..."
 )

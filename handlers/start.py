@@ -12,10 +12,10 @@ router = Router()
 async def cmd_start(message: Message, state: FSMContext, database: DatabaseManager):
     presence = await database.users.get(message.from_user.id)
     if presence == None:
-        await message.answer("Hello, before we proceed we need register you.\nWhat is your name?\n(give you name in Name Surname format, i.e. Samar Kanybek uulu or Samar Kanybekov)")
+        await message.answer("Arybanyz, zhash okurman\nAtynyz kim?\n(atynyzda Name Surname tartibinde berseniz, misaly Bekmyrze Alyshbeav zhe Bekmyrza Samarbek uulu)")
         await state.set_state(ReadingTracker.user_name)
     else:
-        await message.answer("Welcome back", reply_markup=main_keyboard)
+        await message.answer("Kosh kelipsiz", reply_markup=main_keyboard)
 
 @router.message(ReadingTracker.user_name)
 async def process_name(message: Message, state: FSMContext, database: DatabaseManager):
@@ -24,37 +24,37 @@ async def process_name(message: Message, state: FSMContext, database: DatabaseMa
         name = provision[0]
         surname = " ".join(provision[1:])
         await database.users.add(message.from_user.id, name, surname)
-        await message.answer(f"Welcome, {name}\n", reply_markup=main_keyboard)
+        await message.answer(f"Kosh keldiniz, {name}\n", reply_markup=main_keyboard)
         await state.clear()
     else:
-        await message.answer("Please insert name & surnmame as shown in the format")
+        await message.answer("Surancyh atynyzdy talaptagydai kirgiziniz")
     
 
-@router.message(F.text == "Бет киргизүү📖")
+@router.message(F.text == "Bet kirgizuu📖")
 async def trigger_log_page(message: Message, state: FSMContext):
-    await message.answer("How pages have you read?")
+    await message.answer("Kancha bet okudunuz?")
     await state.set_state(ReadingTracker.log_page)
 
 @router.message(ReadingTracker.log_page)
 async def process_page(message: Message, state: FSMContext, database: DatabaseManager):
     if message.text.isdigit() and int(message.text)>=0:
         pages = int(message.text)
-        await message.answer(f"Done, {pages} added for today")
+        await message.answer(f"Zharait, {pages} bet bugungo koshup koidum👌")
         await database.logs.add(message.from_user.id, pages)
         await state.clear()
 
     else:
-        await message.answer("Please insert proper number of pages")
+        await message.answer("Suranych durus bir bet sanyn kirgiziniz")
 
-@router.message(F.text == "Меники👤")
+@router.message(F.text == "Meniki👤")
 async def show_progress(message: Message, database: DatabaseManager):
     records = await database.logs.get(message.from_user.id)
 
     if not records:
-        await message.answer("Сиз али бет киргизбептирсиз")
+        await message.answer("Siz ali bet kirgize eleksiz")
         return
     
-    response_text = "**Сиздин окуу тарыхыңыз:**\n\n"
+    response_text = "**Sizdin oku taryhynyz:**\n\n"
     total_pages = 0
     
     for row in records:
@@ -62,16 +62,16 @@ async def show_progress(message: Message, database: DatabaseManager):
         pages = row['pages_read']
         total_pages+=pages
 
-        response_text+=f"{date_str}: {pages} бет\n"
+        response_text+=f"{date_str}: {pages} bet\n"
 
-    response_text+=f"\n **Жалпы:** {total_pages} бет"
+    response_text+=f"\n **Zhalpy:** {total_pages} bet"
 
     await message.answer(response_text, parse_mode="Markdown")
 
-@router.message(F.text == "Жалпы📈")
+@router.message(F.text == "Zhalpy📈")
 async def hyperlink(message: Message):
     sheet_url = "https://docs.google.com/spreadsheets/d/14bOLSsLN2cQGG_YpGhfGaleeLSJt5YhXu3LzM6Exqv8/edit?usp=sharing"
-    response_text = f"📊 [Жалпы абал]({sheet_url})"
+    response_text = f"📊 [TimeClub]({sheet_url})"
     
     await message.answer(
         response_text, 
