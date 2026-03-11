@@ -100,18 +100,21 @@ class DatabaseManager:
         self.migration = ReportRepository(self.pool)
 
     async def create_table(self):
-        query = """
-        CREATE TABLE IF NOT EXISTS reading_logs (
-            telegram_id BIGINT,
-            log_date DATE DEFAULT CURRENT_DATE,
-            pages_read INTEGER,
-            PRIMARY KEY (telegram_id, log_date)
-        );
-        CREATE TABLE IF NOT EXISTS users (
-            telegram_id BIGINT PRIMARY KEY,
-            user_name VARCHAR(255),
-            user_surname VARCHAR(255)
-        )
-            """
-        async with self.pool.acquire() as connection:
-            await connection.execute(query)
+        async with self._pool.acquire() as connection:
+        # Create users table first (reading_logs references it via telegram_id)
+            await connection.execute("""
+                CREATE TABLE IF NOT EXISTS users (
+                    telegram_id BIGINT PRIMARY KEY,
+                    user_name TEXT NOT NULL,
+                    user_surname TEXT NOT NULL
+                )
+            """)
+        # Create reading_logs table
+            await connection.execute("""
+                CREATE TABLE IF NOT EXISTS reading_logs (
+                    telegram_id BIGINT,
+                    log_date DATE NOT NULL,
+                    pages_read INTEGER NOT NULL DEFAULT 0,
+                    PRIMARY KEY (telegram_id, log_date)
+                )
+            """)
