@@ -99,8 +99,9 @@ class DatabaseManager:
         self.logs = LogRepository(self.pool)
         self.migration = ReportRepository(self.pool)
 
+    
     async def create_table(self):
-        async with self._pool.acquire() as connection:
+        async with self.pool.acquire() as connection:
         # Create users table first (reading_logs references it via telegram_id)
             await connection.execute("""
                 CREATE TABLE IF NOT EXISTS users (
