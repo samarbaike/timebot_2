@@ -12,7 +12,7 @@ router = Router()
 async def cmd_start(message: Message, state: FSMContext, database: DatabaseManager):
     presence = await database.users.get(message.from_user.id)
     if presence == None:
-        await message.answer("Arybanyz, zhash okurman\nAtynyz kim?\n(atynyzda Name Surname tartibinde berseniz, misaly Bekmyrze Alyshbeav zhe Bekmyrza Samarbek uulu)")
+        await message.answer("Arybanyz, zhash okurman👋\n\n\nAtynyz kim?\n(atynyzdy Name Surname tartibinde berseniz zhakshy bolmok,\n\n misaly Bekmyrze Alyshbeav zhe Bekmyrza Samarbek uulu degendei)")
         await state.set_state(ReadingTracker.user_name)
     else:
         await message.answer("Kosh kelipsiz", reply_markup=main_keyboard)
@@ -24,10 +24,10 @@ async def process_name(message: Message, state: FSMContext, database: DatabaseMa
         name = provision[0]
         surname = " ".join(provision[1:])
         await database.users.add(message.from_user.id, name, surname)
-        await message.answer(f"Kosh keldiniz, {name}\n", reply_markup=main_keyboard)
+        await message.answer(f"Kosh keldiniz, {name}🤍\n", reply_markup=main_keyboard)
         await state.clear()
     else:
-        await message.answer("Surancyh atynyzdy talaptagydai kirgiziniz")
+        await message.answer("Surancyh atynyzdy talaptagydai kirgiziniz☢️")
     
 
 @router.message(F.text == "Bet kirgizuu📖")
@@ -44,17 +44,17 @@ async def process_page(message: Message, state: FSMContext, database: DatabaseMa
         await state.clear()
 
     else:
-        await message.answer("Suranych durus bir bet sanyn kirgiziniz")
+        await message.answer("Suranych durus bir bet sanyn kirgiziniz☢️")
 
 @router.message(F.text == "Meniki👤")
 async def show_progress(message: Message, database: DatabaseManager):
     records = await database.logs.get(message.from_user.id)
 
     if not records:
-        await message.answer("Siz ali bet kirgize eleksiz")
+        await message.answer("Siz ali bet kirgize eleksiz⛔")
         return
     
-    response_text = "**Sizdin oku taryhynyz:**\n\n"
+    response_text = "**Sizdin oku taryhynyz🕜:**\n\n"
     total_pages = 0
     
     for row in records:
@@ -64,7 +64,7 @@ async def show_progress(message: Message, database: DatabaseManager):
 
         response_text+=f"{date_str}: {pages} bet\n"
 
-    response_text+=f"\n **Zhalpy:** {total_pages} bet"
+    response_text+=f"\n **➡️Zhalpy:** {total_pages} bet"
 
     await message.answer(response_text, parse_mode="Markdown")
 
