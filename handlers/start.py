@@ -37,7 +37,7 @@ async def trigger_log_page(message: Message, state: FSMContext):
 
 @router.message(ReadingTracker.log_page)
 async def process_page(message: Message, state: FSMContext, database: DatabaseManager):
-    if message.text.isdigit() and int(message.text)>=0:
+    if message.text.isdigit() and int(message.text)>0:
         pages = int(message.text)
         await message.answer(f"Zharait, {pages} bet bugungo koshup koidum👌")
         await database.logs.add(message.from_user.id, pages)
