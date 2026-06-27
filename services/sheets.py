@@ -28,29 +28,48 @@ class GoogleSheetManager:
         credentials = Credentials.from_service_account_info(creds_dict, scopes=scopes)
         self.client = gspread.authorize(credentials)
 
-    def upload_dataframe(self, df: pd.DataFrame):
-        """Wipes the target Google Sheet and uploads the new Pandas DataFrame."""
-        # 1. Connect to the specific Google Sheet and grab the first tab (Sheet1)
-        sheet = self.client.open_by_key(self.spreadsheet_id).sheet1
-        
-        # 2. Wipe the existing data completely clean
-        sheet.clear()
+    def _get_or_create_sheet(self, spreadsheet, title: str):
+        try:
+            return spreadsheet.worksheet(title)
+        except gspread.exceptions.WorksheetNotFound:
+            return spreadsheet.add_worksheet(title=title, rows=200, cols=50)
 
-        # 3. Defensive Check: If DataFrame is empty, stop here.
-        if df.empty:
-            return
+    def _build_pivot(self, df, pivot_column: str):
+        pivot = df.pivot_table(
+            index='full_name',
+            columns=pivot_column,
+            values='pages_read',
+            aggfunc='sum',
+            fill_value=0
+        )
+        pivot.insert(0, 'Total', pivot.sum(axis=1))
+        pivot = pivot.sort_values('Total', ascending=False)
+        return pivot.reset_index().rename(columns={'full_name': 'Name Surname'})
 
-        # 4. Data Conversion: Fill NaNs with 0, and convert all data to standard Python types
-        df = df.fillna(0)
-        # YOUR ENGINEERING TASK: 
-        # Convert the DataFrame headers into a list. Example: [df.columns.values.tolist()]
-        # Convert the DataFrame rows into a list of lists. Example: df.values.tolist()
-        # Concatenate them together so the headers sit on top of the rows.
+    def _write_to_sheet(self, worksheet, df):
+        worksheet.clear()
         headers = df.columns.values.tolist()
         rows = df.values.tolist()
+        worksheet.update(values=[headers] + rows, range_name='A1')
 
-        matrix = [headers] + rows
-        
-        # 5. Execute the massive batch API update
-        # Syntax: sheet.update(values=your_concatenated_list, range_name='A1')
-        sheet.update(values=matrix, range_name = 'A1')
+    def upload_both_tabs(self, df):
+        spreadsheet = self.client.open_by_key(self.spreadsheet_id)
+
+    # --- Tab 1: daily progress ---
+        df['log_date'] = df['log_date'].apply(
+            lambda d: d.strftime('%b %d') if hasattr(d, 'strftime') else d
+        )
+        daily_df = self._build_pivot(df, pivot_column='log_date')
+    
+    # Reverse date columns so newest is leftmost (keep Name Surname and Total fixed)
+        fixed_cols = ['Name Surname', 'Total']
+        date_cols = [c for c in daily_df.columns if c not in fixed_cols]
+        daily_df = daily_df[fixed_cols + date_cols[::-1]]
+
+        daily_sheet = self._get_or_create_sheet(spreadsheet, '📊 Progress')
+        self._write_to_sheet(daily_sheet, daily_df)
+
+    # --- Tab 2: books ---
+        books_df = self._build_pivot(df, pivot_column='title')
+        books_sheet = self._get_or_create_sheet(spreadsheet, '📚 Kitepter')
+        self._write_to_sheet(books_sheet, books_df)

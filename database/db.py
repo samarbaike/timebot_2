@@ -94,17 +94,17 @@ class LogRepository(BaseRepository):
             await connection.execute("""
                 INSERT INTO reading_logs(user_id, book_id, log_date, pages_read)
                 VALUES ($1, $2, $3, $4)
-                               """, telegram_id, book_id, local_date, pages_read)
+                """, telegram_id, book_id, local_date, pages_read)
 
     async def get(self, telegram_id: int):
         async with self._pool.acquire() as connection:
             return await connection.fetch("""
-                                          SELECT b.title, r.log_date, r.pages_read
-                                          FROM reading_logs r
-                                          JOIN books b ON r.book_id = b.book_id
-                                          WHERE r.user_id = $1
-                                          ORDER BY r.log_date DESC, r.logged_at DESC
-                                          """, telegram_id)
+                SELECT b.title, r.log_date, r.pages_read
+                FROM reading_logs r
+                JOIN books b ON r.book_id = b.book_id
+                WHERE r.user_id = $1
+                ORDER BY r.log_date DESC, r.logged_at DESC
+                """, telegram_id)
 
 class ReportRepository(BaseRepository):
     """
@@ -115,17 +115,17 @@ class ReportRepository(BaseRepository):
     async def get(self):
         async with self._pool.acquire() as connection:
             return await connection.fetch("""
-                                          SELECT 
-                                            CONCAT(u.user_name, ' ', u.user_surname) AS full_name,
-                                            b.title,
-                                            r.log_date,
-                                            SUM(r.pages_read) AS pages_read
-                                          FROM users u
-                                          INNER JOIN reading_logs r ON u.telegram_id = r.user_id
-                                          INNER JOIN books b ON r.book_id = b.book_id
-                                          GROUP BY CONCAT(u.user_name, ' ', u.user_surname), b.title, r.log_date
-                                          ORDER BY r.log_date
-                                          """)
+                SELECT 
+                    CONCAT(u.user_name, ' ', u.user_surname) AS full_name,
+                    b.title,
+                    r.log_date,
+                    SUM(r.pages_read) AS pages_read
+                FROM users u
+                INNER JOIN reading_logs r ON u.telegram_id = r.user_id
+                INNER JOIN books b ON r.book_id = b.book_id
+                GROUP BY CONCAT(u.user_name, ' ', u.user_surname), b.title, r.log_date
+                ORDER BY r.log_date
+                """)
 
 class DatabaseManager:
     def __init__(self):
@@ -152,38 +152,38 @@ class DatabaseManager:
         async with self.pool.acquire() as connection:
             await connection.execute("""
                 CREATE TABLE IF NOT EXISTS users (
-                               telegram_id BIGINT PRIMARY KEY,
-                               user_name TEXT NOT NULL,
-                               user_surname TEXT NOT NULL,
-                               joined_at TIMESTAMP DEFAULT NOW()
-                               ) 
-                               """)
+                    telegram_id BIGINT PRIMARY KEY,
+                    user_name TEXT NOT NULL,
+                    user_surname TEXT NOT NULL,
+                    joined_at TIMESTAMP DEFAULT NOW()
+                ) 
+            """)
             await connection.execute("""
                 CREATE TABLE IF NOT EXISTS books (
-                               book_id SERIAL PRIMARY KEY,
-                               title TEXT NOT NULL
-                               )
-                               """)
+                    book_id SERIAL PRIMARY KEY,
+                    title TEXT NOT NULL
+                )
+            """)
             await connection.execute("""
                 CREATE TABLE IF NOT EXISTS user_books (
-                               user_id BIGINT NOT NULL REFERENCES users(telegram_id) ON DELETE CASCADE,
-                               book_id INTEGER NOT NULL REFERENCES books(book_id) ON DELETE CASCADE,
-                               is_active BOOLEAN NOT NULL DEFAULT TRUE,
-                               added_at TIMESTAMP DEFAULT NOW(),
-                               finished_at TIMESTAMP,
-                               PRIMARY KEY(user_id, book_id)
-                               )
-                               """)
+                    user_id BIGINT NOT NULL REFERENCES users(telegram_id) ON DELETE CASCADE,
+                    book_id INTEGER NOT NULL REFERENCES books(book_id) ON DELETE CASCADE,
+                    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                    added_at TIMESTAMP DEFAULT NOW(),
+                    finished_at TIMESTAMP,
+                    PRIMARY KEY(user_id, book_id)
+                )
+            """)
             await connection.execute("""
                 CREATE TABLE IF NOT EXISTS reading_logs (
-                               log_id SERIAL PRIMARY KEY,
-                               user_id BIGINT NOT NULL REFERENCES users(telegram_id) ON DELETE CASCADE,
-                               book_id INTEGER NOT NULL REFERENCES books(book_id) ON DELETE CASCADE,
-                               pages_read INTEGER NOT NULL CHECK (pages_read > 0),
-                               log_date DATE NOT NULL DEFAULT CURRENT_DATE,
-                               logged_at TIMESTAMP DEFAULT NOW()
-                               )
-                               """)
+                    log_id SERIAL PRIMARY KEY,
+                    user_id BIGINT NOT NULL REFERENCES users(telegram_id) ON DELETE CASCADE,
+                    book_id INTEGER NOT NULL REFERENCES books(book_id) ON DELETE CASCADE,
+                    pages_read INTEGER NOT NULL CHECK (pages_read > 0),
+                    log_date DATE NOT NULL DEFAULT CURRENT_DATE,
+                    logged_at TIMESTAMP DEFAULT NOW()
+                )
+            """)
             await connection.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_books_title_lower ON books(LOWER(title))")
             await connection.execute("CREATE INDEX IF NOT EXISTS idx_logs_user_date ON reading_logs(user_id, log_date)")
             await connection.execute("CREATE INDEX IF NOT EXISTS idx_logs_date ON reading_logs(log_date)")

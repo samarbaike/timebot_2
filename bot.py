@@ -41,22 +41,16 @@ async def run_midnight_export(db: DatabaseManager):
             logging.info("Export aborted: Database is empty.")
             return
 
-        # 2. TRANSFORM (From your blank.py experiments)
+        # TRANSFORM
         df = pd.DataFrame(data)
-        pivot_df = df.pivot_table(
-            index='full_name', 
-            columns='log_date', 
-            values='pages_read', 
-            aggfunc='sum', 
-            fill_value=0
-        )
-        
-        pivot_df.columns = [col.strftime('%Y-%m-%d') if isinstance(col, datetime.date) else col for col in pivot_df.columns]
-        final_df = pivot_df.reset_index().rename(columns={'full_name': 'Name Surname'})
-        
-        # 3. LOAD (From sheets.py)
+
+        # Two separate pivots from the same raw data
+        # (date formatting happens inside upload_both_tabs)
+        df['log_date'] = pd.to_datetime(df['log_date'])
+
+        # LOAD
         sheet_manager = GoogleSheetManager()
-        sheet_manager.upload_dataframe(final_df)
+        sheet_manager.upload_both_tabs(df)
         
         logging.info("✅ Scheduled export successfully completed.")
         
