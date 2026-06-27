@@ -123,7 +123,7 @@ class ReportRepository(BaseRepository):
                                           FROM users u
                                           INNER JOIN reading_logs r ON u.telegram_id = r.user_id
                                           INNER JOIN books b ON r.book_id = b.book_id
-                                          GROUP BY full_name, b.title, r.log_date
+                                          GROUP BY CONCAT(u.user_name, ' ', u.user_surname), b.title, r.log_date
                                           ORDER BY r.log_date
                                           """)
 
@@ -184,6 +184,7 @@ class DatabaseManager:
                                logged_at TIMESTAMP DEFAULT NOW()
                                )
                                """)
+            await connection.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_books_title_lower ON books(LOWER(title))")
             await connection.execute("CREATE INDEX IF NOT EXISTS idx_logs_user_date ON reading_logs(user_id, log_date)")
             await connection.execute("CREATE INDEX IF NOT EXISTS idx_logs_date ON reading_logs(log_date)")
             await connection.execute("CREATE INDEX IF NOT EXISTS idx_logs_book_date ON reading_logs(book_id, log_date)")
