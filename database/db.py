@@ -101,21 +101,41 @@ class DatabaseManager:
 
     
     async def create_table(self):
-        async with self.pool.acquire() as connection:
-        # Create users table first (reading_logs references it via telegram_id)
-            await connection.execute("""
+        async with self.pool.acquire() as conn:
+            await conn.execute("""
                 CREATE TABLE IF NOT EXISTS users (
-                    telegram_id BIGINT PRIMARY KEY,
-                    user_name TEXT NOT NULL,
-                    user_surname TEXT NOT NULL
-                )
-            """)
-        # Create reading_logs table
-            await connection.execute("""
+                               telegram_id BIGINT PRIMARY KEY,
+                               user_name TEXT NOT NULL,
+                               user_surname TEXT NOT NULL,
+                               joined_at TIMESTAMP DEFAULT NOW()
+                               ) 
+                               """)
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS books (
+                               book_id SERIAL PRIMARY KEY,
+                               title TEXT NOT NULL
+                               )
+                               """)
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS user_books (
+                               user_id BIGINT NOT NULL REFERENCES users(telegram_id) ON DELETE CASCADE,
+                               book_id INTEGER NOT NULL REGERENCES books(book_id) ON DELETE CASCADE,
+                               is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                               added_at TIMESTAMP DEFAULT NOW(),
+                               finished_at TIMESTAMP,
+                               PRIMARY KEY(user_id, book_id)
+                               )
+                               """)
+            await conn.execute("""
                 CREATE TABLE IF NOT EXISTS reading_logs (
-                    telegram_id BIGINT,
-                    log_date DATE NOT NULL,
-                    pages_read INTEGER NOT NULL DEFAULT 0,
-                    PRIMARY KEY (telegram_id, log_date)
-                )
-            """)
+                               log_id SERIAL PRIMARY KEY,
+                               user_id BIGINT NOT NULL REFERENCES users(telegram_id) ON DELETE CASCADE,
+                               book_id INTEGER NOT NULL REFERENCES books(book_id) ON DELETE CASCADE,
+                               pages_read INTEGER NOT NULL CHECK (pages_read > 0),
+                               log_date DATE NOT NULL DEFAULT CURRENT_DATE,
+                               loggad_at TIMESTAMP DEFAULT NOW()
+                               )
+                               """)
+            await conn.execute("CREATE INDEX IF NOT EXISTS idx_logs_user_date ON reading_logs(user_id, log_date)")
+            await conn.execute("CREATE INDEX IF NOT EXISTS idx_logs_date ON reading_logs(log_date)")
+            await conn.execute("CREATE INDEX IF NOT EXISTS idx_logs_book_date ON reading_logs(book_id, log_date)")

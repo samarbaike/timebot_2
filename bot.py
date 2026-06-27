@@ -16,7 +16,7 @@ from services.sheets import GoogleSheetManager
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 
 load_dotenv()
-db_url = os.getenv("DB_URL")
+db_url = os.getenv("DB_URL2")
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
