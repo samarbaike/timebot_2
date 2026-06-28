@@ -66,7 +66,7 @@ class GoogleSheetManager:
         date_cols = [c for c in daily_df.columns if c not in fixed_cols]
         daily_df = daily_df[fixed_cols + date_cols[::-1]]
 
-        daily_sheet = self._get_or_create_sheet(spreadsheet, '📊 Progress')
+        daily_sheet = self._get_or_create_sheet(spreadsheet, '📊 Pragres')
         self._write_to_sheet(daily_sheet, daily_df)
 
     # --- Tab 2: books ---
