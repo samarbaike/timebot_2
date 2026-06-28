@@ -33,7 +33,7 @@ async def handle_inline_query(query: InlineQuery, database: DatabaseManager):
         await query.answer([InlineQueryResultArticle(
             id="hint",
             title=f"👋 {full_name}",
-            description="Kitep aty, bet sany — dep zhazyn",
+            description="Kitep aty, bet sany",
             input_message_content=InputTextMessageContent(
                 message_text=f"Misaly: Dune, 45"
             )
@@ -48,7 +48,7 @@ async def handle_inline_query(query: InlineQuery, database: DatabaseManager):
         await query.answer([InlineQueryResultArticle(
             id="err",
             title="❌ Bet sany galaty",
-            description="On butun san bolush kerek — misaly: Dune, 45",
+            description="Oŋ butun san bolush kerek — misaly: Dune, 45",
             input_message_content=InputTextMessageContent(
                 message_text="❌ Bet sany galaty"
             )
@@ -60,7 +60,7 @@ async def handle_inline_query(query: InlineQuery, database: DatabaseManager):
         title=f"✅ {full_name}",
         description=f"«{book_title}» — {int(pages_str)} bet",
         input_message_content=InputTextMessageContent(
-            message_text=f"📖 {full_name}: «{book_title}» — {int(pages_str)} bet bugun okudu"
+            message_text=f"📖 {full_name}: «{book_title}» — {int(pages_str)} bet"
         )
     )], cache_time=0)
 
