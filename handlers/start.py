@@ -12,7 +12,7 @@ router = Router()
 async def cmd_start(message: Message, state: FSMContext, database: DatabaseManager):
     presence = await database.users.get(message.from_user.id)
     if presence == None:
-        await message.answer("Arybanyz, zhash okurman👋\n\n\nAtynyz kim?\n(atynyzdy Name Surname tartibinde berseniz zhakshy bolmok,\n\n misaly Bekmyrze Alyshbeav zhe Bekmyrza Samarbek uulu degendei)")
+        await message.answer("Arybanyz, zhash okurman👋\n\n\nAtynyz kim?\n(atynyzdy Name Surname tartibinde berseniz zhakshy bolmok,\n\n misaly Bekmyrza Alyshbeav zhe Bekmyrza Samarbek uulu degendei)")
         await state.set_state(ReadingTracker.user_name)
     else:
         await message.answer("Kosh kelipsiz", reply_markup=main_keyboard)
@@ -59,7 +59,7 @@ async def process_new_book(message: Message, state: FSMContext, database: Databa
     book_id = await database.books.add(title)
     await database.user_books.add(message.from_user.id, book_id)
     await state.update_data(book_id=book_id)
-    await message.answer(f"'{title}' kitep tizmenizge koshuldu!\nKancha bet okudunuz?")
+    await message.answer(f"'{title}' kitebi tizmenizge koshuldu!\nKancha bet okudunuz?")
     await state.set_state(ReadingTracker.log_page)
 
 @router.message(ReadingTracker.log_page)
@@ -91,7 +91,7 @@ async def show_progress(message: Message, database: DatabaseManager):
 
 @router.message(F.text == "Zhalpy📈")
 async def hyperlink(message: Message):
-    sheet_url = "https://docs.google.com/spreadsheets/d/14bOLSsLN2cQGG_YpGhfGaleeLSJt5YhXu3LzM6Exqv8/edit?usp=sharing"
+    sheet_url = "https://docs.google.com/spreadsheets/d/1jpV8B5rMd5FfNqMmrfxxShMfaZvLd1aDG-HdGIEtzoM/edit?usp=sharing"
     response_text = f"📊 [TimeClub]({sheet_url})"
     
     await message.answer(

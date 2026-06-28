@@ -16,7 +16,7 @@ from services.sheets import GoogleSheetManager
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 
 load_dotenv()
-db_url = os.getenv("DB_URL2")
+db_url = os.getenv("DB_URL")
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
@@ -80,8 +80,8 @@ async def main():
     scheduler = AsyncIOScheduler(timezone="Asia/Bishkek")
     
     # TODO: CHANGE THESE NUMBERS FOR YOUR TEST RUN
-    test_hour = 0
-    test_minute = 0 # Set this to 2 minutes from your current local time
+    test_hour = 11
+    test_minute = 51 # Set this to 2 minutes from your current local time
     
     scheduler.add_job(
         run_midnight_export, 
