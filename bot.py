@@ -12,6 +12,8 @@ import pandas as pd
 import datetime
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from services.sheets import GoogleSheetManager
+from handlers.inline import router as inline_router
+
 
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 
@@ -23,6 +25,7 @@ dp = Dispatcher()
 
 # Attach the router here
 dp.include_router(router)
+dp.include_router(inline_router)
 
 async def health_check(request):
     return web.Response(text="Bot is alive!")

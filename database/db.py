@@ -38,6 +38,13 @@ class UserRepository(BaseRepository):
             fetchedval = await connection.fetchval(query, telegram_id)
 
         return fetchedval
+    async def get_by_name(self, user_name: str, user_surname: str):
+        async with self._pool.acquire() as conn:
+            return await conn.fetchrow("""
+                SELECT telegram_id FROM users
+                WHERE LOWER(user_name) = LOWER($1)
+                AND LOWER(user_surname) = LOWER($2)
+            """, user_name, user_surname)
 
 class BookRepository(BaseRepository):
     async def add(self, title: str) -> int:
