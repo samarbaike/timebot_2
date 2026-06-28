@@ -44,7 +44,7 @@ class BookRepository(BaseRepository):
         """Inserts the book globally if it doesn't exist, returns its book_id either way."""
         async with self._pool.acquire() as connection:
             await connection.execute(
-                "INSERT INTO books(title) VALUES ($1) ON CONFLICT ((LOWER(title))) DO NOTHING",
+                "INSERT INTO books(title) VALUES ($1) ON CONFLICT (LOWER(title)) DO NOTHING",
                 title
             )
             return await connection.fetchval(
