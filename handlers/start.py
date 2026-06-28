@@ -6,11 +6,11 @@ from aiogram.fsm.context import FSMContext
 from services.states import ReadingTracker
 from database.db import DatabaseManager
 from keyboard import main_keyboard, build_books_keyboard
-from aiogram.filters import CommandStart, ChatType
+from aiogram.enums import ChatType
 
 router = Router()
 
-@router.message(CommandStart(), ChatType("private"))
+@router.message(CommandStart(), F.chat.type == ChatType.PRIVATE)
 async def cmd_start(message: Message, state: FSMContext, database: DatabaseManager):
     presence = await database.users.get(message.from_user.id)
     if presence == None:
