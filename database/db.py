@@ -38,13 +38,12 @@ class UserRepository(BaseRepository):
             fetchedval = await connection.fetchval(query, telegram_id)
 
         return fetchedval
-    async def get_by_name(self, user_name: str, user_surname: str):
+    async def get_full(self, telegram_id: int):
         async with self._pool.acquire() as conn:
-            return await conn.fetchrow("""
-                SELECT telegram_id FROM users
-                WHERE LOWER(user_name) = LOWER($1)
-                AND LOWER(user_surname) = LOWER($2)
-            """, user_name, user_surname)
+            return await conn.fetchrow(
+                "SELECT telegram_id, user_name, user_surname FROM users WHERE telegram_id = $1",
+                telegram_id
+            )
 
 class BookRepository(BaseRepository):
     async def add(self, title: str) -> int:
