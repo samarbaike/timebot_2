@@ -36,7 +36,7 @@ async def cmd_start(message: Message, state: FSMContext, database: DatabaseManag
         await message.answer("Arybaŋyz, zhash oqurman👋\n\n\nAtynyz kim?\n(atyŋyzdy Name Surname tartibinde latyn tamgalary menen berseŋiz sonun bolot,\n\n misaly Bekmyrza Alyshbeav zhe Bekmyrza Samarbek uulu degendei)")
         await state.set_state(ReadingTracker.user_name)
     else:
-        await message.answer(f"{presence.user_name}, sizdi kaira körgönü qubanychtamyn 🫰", reply_markup=main_keyboard)
+        await message.answer(f"{presence['user_name']}, sizdi kaira körgönü qubanychtamyn 🫰", reply_markup=main_keyboard)
 
 @router.message(ReadingTracker.user_name)
 async def process_name(message: Message, state: FSMContext, database: DatabaseManager):
