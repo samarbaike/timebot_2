@@ -139,7 +139,7 @@ async def hyperlink(message: Message):
 
 @router.message(F.text == "Gruppaga qoshuluu 👥")
 async def hyperlink(message: Message):
-    sheet_url = "https://t.me/+fFDOL92_KSs3YTM6"
+    sheet_url = "https://t.me/+mYguvPw7CopiODEy"
     response_text = f"Gruppaga qoshuluu shiltemesi: \n👥[oQush]({sheet_url})"
     
     await message.answer(
