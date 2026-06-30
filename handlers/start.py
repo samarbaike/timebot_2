@@ -14,10 +14,10 @@ router = Router()
 async def cmd_start(message: Message, state: FSMContext, database: DatabaseManager):
     presence = await database.users.get(message.from_user.id)
     if presence == None:
-        await message.answer("Arybaŋyz, zhash okurman👋\n\n\nAtynyz kim?\n(atyŋyzdy Name Surname tartibinde berseŋiz zhakshy bolmok,\n\n misaly Bekmyrza Alyshbeav zhe Bekmyrza Samarbek uulu degendei)")
+        await message.answer("Arybaŋyz, zhash oqurman👋\n\n\nAtynyz kim?\n(atyŋyzdy Name Surname tartibinde berseŋiz sonun bolot,\n\n misaly Bekmyrza Alyshbeav zhe Bekmyrza Samarbek uulu degendei)")
         await state.set_state(ReadingTracker.user_name)
     else:
-        await message.answer("Kosh kelipsiz", reply_markup=main_keyboard)
+        await message.answer("Qosh keldiŋiz", reply_markup=main_keyboard)
 
 @router.message(ReadingTracker.user_name)
 async def process_name(message: Message, state: FSMContext, database: DatabaseManager):
@@ -26,7 +26,7 @@ async def process_name(message: Message, state: FSMContext, database: DatabaseMa
         name = provision[0]
         surname = " ".join(provision[1:])
         await database.users.add(message.from_user.id, name, surname)
-        await message.answer(f"Hosh keldiŋiz, {name}🤍\n", reply_markup=main_keyboard)
+        await message.answer(f"Qosh keldiŋiz, {name}🤍\n", reply_markup=main_keyboard)
         await state.clear()
     else:
         await message.answer("Suranych atyŋyzdy talaptagydai kirgiziŋiz☢️")
@@ -36,11 +36,11 @@ async def process_name(message: Message, state: FSMContext, database: DatabaseMa
 async def trigger_log_page(message: Message, state: FSMContext, database: DatabaseManager):
     books = await database.user_books.get(message.from_user.id)
     if not books:
-        await message.answer("Kaisy kitepti okudunuz? Atyn zhazyŋyz:")
+        await message.answer("Qaisy kitepti oqudunuz? Atyn zhazyŋyz:")
         await state.set_state(ReadingTracker.add_book)
     else:
         keyboard = build_books_keyboard(books)
-        await message.answer("Kaisy kitepti okuduŋuz?", reply_markup=keyboard)
+        await message.answer("Qaisy kitepti oquduŋuz?", reply_markup=keyboard)
         await state.set_state(ReadingTracker.choose_book)
 
 @router.callback_query(ReadingTracker.choose_book)
@@ -51,7 +51,7 @@ async def process_book_choice(callback: CallbackQuery, state: FSMContext, databa
     else:
         book_id = int(callback.data.split(":")[1])  # "book:42" → 42
         await state.update_data(book_id=book_id)
-        await callback.message.answer("Kancha bet okuduŋuz?")
+        await callback.message.answer("Qancha bet oquduŋuz?")
         await state.set_state(ReadingTracker.log_page)
     await callback.answer()  # clears the loading spinner on the button
 
@@ -61,7 +61,7 @@ async def process_new_book(message: Message, state: FSMContext, database: Databa
     book_id = await database.books.add(title)
     await database.user_books.add(message.from_user.id, book_id)
     await state.update_data(book_id=book_id)
-    await message.answer(f"'{title}' kitebi tizmeŋizge koshuldu!\n\nKancha bet okuduŋuz?")
+    await message.answer(f"'{title}' kitebi tizmeŋizge qoshuldu!\n\nQancha bet oquduŋuz?")
     await state.set_state(ReadingTracker.log_page)
 
 @router.message(ReadingTracker.log_page)
@@ -82,7 +82,7 @@ async def show_progress(message: Message, database: DatabaseManager):
     if not records:
         await message.answer("Siz ali bet kirgize eleksiz⛔")
         return
-    response_text = "**Sizdin okuu taryhchaŋyz🕜:**\n\n"
+    response_text = "**Sizdin oquu taryhchaŋyz🕜:**\n\n"
     total_pages = 0
     for row in records:
         date_str = row['log_date'].strftime("%Y-%m-%d")
@@ -95,6 +95,17 @@ async def show_progress(message: Message, database: DatabaseManager):
 async def hyperlink(message: Message):
     sheet_url = "https://docs.google.com/spreadsheets/d/1jpV8B5rMd5FfNqMmrfxxShMfaZvLd1aDG-HdGIEtzoM/edit?usp=sharing"
     response_text = f"📊 [TimeClub]({sheet_url})"
+    
+    await message.answer(
+        response_text, 
+        parse_mode="Markdown", 
+        link_preview_options=LinkPreviewOptions(is_disabled=True)
+    )
+
+@router.message(F.text == "Gruppaga qoshuluu 👥")
+async def hyperlink(message: Message):
+    sheet_url = "https://t.me/+fFDOL92_KSs3YTM6"
+    response_text = f"📊 [oQush]({sheet_url})"
     
     await message.answer(
         response_text, 

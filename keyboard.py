@@ -6,10 +6,11 @@ from aiogram.types import (
 main_keyboard = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="Bet kirgizuu📖")],
-        [KeyboardButton(text="Zhalpy📈"), KeyboardButton(text="Meniki👤")]
+        [KeyboardButton(text="Zhalpy📈"), KeyboardButton(text="Meniki👤")],
+        [KeyboardButton(text="Gruppaga qoshuluu 👥")]
     ],
     resize_keyboard=True,
-    input_field_placeholder="Emne kylaly..."
+    input_field_placeholder="Emne qylaly..."
 )
 
 def build_books_keyboard(books) -> InlineKeyboardMarkup:
@@ -20,7 +21,7 @@ def build_books_keyboard(books) -> InlineKeyboardMarkup:
             callback_data=f"book:{book['book_id']}"
         )])
     buttons.append([InlineKeyboardButton(
-        text="Zhany kitep ➕",
+        text="Zhaŋy kitep ➕",
         callback_data="add_new_book"
     )])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
