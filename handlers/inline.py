@@ -22,7 +22,7 @@ async def handle_inline_query(query: InlineQuery, database: DatabaseManager):
             title="❌ Sistemada zhokkens",
             description="Bottun zheke qatyna zhazyp, qattalynyz",
             input_message_content=InputTextMessageContent(
-                message_text="❌ Men qattalbapmyn. Botqo /start zhazuum kerek."
+                message_text="❌ Men qattalbapmyn. Botqo zhazuum kerek."
             )
         )], cache_time=0)
         return
@@ -48,7 +48,7 @@ async def handle_inline_query(query: InlineQuery, database: DatabaseManager):
         await query.answer([InlineQueryResultArticle(
             id="err",
             title="❌ Bet sany galaty",
-            description="Oŋ butun san bolush kerek — misaly: Harry Potter, 45",
+            description="Oŋ bütün san bolush kerek — misaly: Harry Potter, 45",
             input_message_content=InputTextMessageContent(
                 message_text="❌ Bet sany galaty"
             )

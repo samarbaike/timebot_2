@@ -32,7 +32,7 @@ async def process_name(message: Message, state: FSMContext, database: DatabaseMa
         await message.answer("Suranych atyŋyzdy talaptagydai kirgiziŋiz☢️")
     
 
-@router.message(F.text == "Bet kirgizuu📖")
+@router.message(F.text == "Bet kirgizüü📖")
 async def trigger_log_page(message: Message, state: FSMContext, database: DatabaseManager):
     books = await database.user_books.get(message.from_user.id)
     if not books:
@@ -71,7 +71,7 @@ async def process_page(message: Message, state: FSMContext, database: DatabaseMa
         data = await state.get_data()
         book_id = data['book_id']
         await database.logs.add(message.from_user.id, book_id, pages)
-        await message.answer(f"Zharait, {pages} bet bugungo koshup koidum👌")
+        await message.answer(f"Zharait, {pages} bet bügüngö koshup koidum👌")
         await state.clear()
     else:
         await message.answer("Suranych durus bir bet sanyn zhazyŋyz☢️")

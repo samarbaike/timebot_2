@@ -5,7 +5,7 @@ from aiogram.types import (
 
 main_keyboard = ReplyKeyboardMarkup(
     keyboard=[
-        [KeyboardButton(text="Bet kirgizuu📖")],
+        [KeyboardButton(text="Bet kirgizüü📖")],
         [KeyboardButton(text="Zhalpy📈"), KeyboardButton(text="Meniki👤")],
         [KeyboardButton(text="Gruppaga qoshuluu 👥")]
     ],
