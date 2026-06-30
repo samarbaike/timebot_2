@@ -7,6 +7,25 @@ from services.states import ReadingTracker
 from database.db import DatabaseManager
 from keyboard import main_keyboard, build_books_keyboard
 from aiogram.enums import ChatType
+import re
+
+def contains_emoji(text: str) -> bool:
+    emoji_pattern = re.compile(
+        "["
+        "\U0001F600-\U0001F64F"  # emoticons
+        "\U0001F300-\U0001F5FF"  # symbols & pictographs
+        "\U0001F680-\U0001F6FF"  # transport & map
+        "\U0001F700-\U0001F77F"  # alchemical
+        "\U0001F780-\U0001F7FF"
+        "\U0001F800-\U0001F8FF"
+        "\U0001F900-\U0001F9FF"  # supplemental symbols
+        "\U0001FA00-\U0001FAFF"
+        "\U00002700-\U000027BF"  # dingbats
+        "\U00002600-\U000026FF"
+        "]+",
+        flags=re.UNICODE
+    )
+    return bool(emoji_pattern.search(text))
 
 router = Router()
 
@@ -14,10 +33,10 @@ router = Router()
 async def cmd_start(message: Message, state: FSMContext, database: DatabaseManager):
     presence = await database.users.get(message.from_user.id)
     if presence == None:
-        await message.answer("Arybaŋyz, zhash oqurman👋\n\n\nAtynyz kim?\n(atyŋyzdy Name Surname tartibinde berseŋiz sonun bolot,\n\n misaly Bekmyrza Alyshbeav zhe Bekmyrza Samarbek uulu degendei)")
+        await message.answer("Arybaŋyz, zhash oqurman👋\n\n\nAtynyz kim?\n(atyŋyzdy Name Surname tartibinde latyn tamgalary menen berseŋiz sonun bolot,\n\n misaly Bekmyrza Alyshbeav zhe Bekmyrza Samarbek uulu degendei)")
         await state.set_state(ReadingTracker.user_name)
     else:
-        await message.answer("Qosh keldiŋiz", reply_markup=main_keyboard)
+        await message.answer(f"{presence.user_name}, sizdi kaira körgönü qubanychtamyn 🫰", reply_markup=main_keyboard)
 
 @router.message(ReadingTracker.user_name)
 async def process_name(message: Message, state: FSMContext, database: DatabaseManager):
@@ -58,15 +77,31 @@ async def process_book_choice(callback: CallbackQuery, state: FSMContext, databa
 @router.message(ReadingTracker.add_book)
 async def process_new_book(message: Message, state: FSMContext, database: DatabaseManager):
     title = message.text.strip()
+
+    if contains_emoji(title):
+        await message.answer(
+            "❌ Kitep aty tuura emes.\n\n"
+            "📚 Taza atyn jazyŋyz (misaly: Atomic Habits)"
+        )
+        return  # stay in same state
+
+    if not title:
+        await message.answer("❌ Kitap aty tuura emes. Qayra jazyŋyz.")
+        return
+
     book_id = await database.books.add(title)
     await database.user_books.add(message.from_user.id, book_id)
+
     await state.update_data(book_id=book_id)
-    await message.answer(f"'{title}' kitebi tizmeŋizge qoshuldu!\n\nQancha bet oquduŋuz?")
+    await message.answer(
+        f"📖 '{title}' kitep tizmeŋizge qoshuldu!\n\n"
+        "Qancha bet oquduŋuz?"
+    )
     await state.set_state(ReadingTracker.log_page)
 
 @router.message(ReadingTracker.log_page)
 async def process_page(message: Message, state: FSMContext, database: DatabaseManager):
-    if message.text.isdigit() and int(message.text) > 0:
+    if message.text.isdigit() and int(message.text) > 0 and int(message.text) < 1000:
         pages = int(message.text)
         data = await state.get_data()
         book_id = data['book_id']
@@ -94,7 +129,7 @@ async def show_progress(message: Message, database: DatabaseManager):
 @router.message(F.text == "Zhalpy📈")
 async def hyperlink(message: Message):
     sheet_url = "https://docs.google.com/spreadsheets/d/1jpV8B5rMd5FfNqMmrfxxShMfaZvLd1aDG-HdGIEtzoM/edit?usp=sharing"
-    response_text = f"📊 [TimeClub]({sheet_url})"
+    response_text = f"Klubtun zhalpy shiltemesi - 📊[TimeClub]({sheet_url})"
     
     await message.answer(
         response_text, 
@@ -105,7 +140,7 @@ async def hyperlink(message: Message):
 @router.message(F.text == "Gruppaga qoshuluu 👥")
 async def hyperlink(message: Message):
     sheet_url = "https://t.me/+fFDOL92_KSs3YTM6"
-    response_text = f"📊 [oQush]({sheet_url})"
+    response_text = f"Gruppaganyn shiltemesi - 👥[oQush]({sheet_url})"
     
     await message.answer(
         response_text, 
