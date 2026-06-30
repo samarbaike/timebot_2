@@ -129,7 +129,7 @@ async def show_progress(message: Message, database: DatabaseManager):
 @router.message(F.text == "Zhalpy📈")
 async def hyperlink(message: Message):
     sheet_url = "https://docs.google.com/spreadsheets/d/1jpV8B5rMd5FfNqMmrfxxShMfaZvLd1aDG-HdGIEtzoM/edit?usp=sharing"
-    response_text = f"Klubtun zhalpy shiltemesi - 📊[TimeClub]({sheet_url})"
+    response_text = f"Klubtun zhalpy zhyiyntyq shiltemesi: \n📊[TimeClub]({sheet_url})"
     
     await message.answer(
         response_text, 
@@ -140,7 +140,7 @@ async def hyperlink(message: Message):
 @router.message(F.text == "Gruppaga qoshuluu 👥")
 async def hyperlink(message: Message):
     sheet_url = "https://t.me/+fFDOL92_KSs3YTM6"
-    response_text = f"Gruppaganyn shiltemesi - 👥[oQush]({sheet_url})"
+    response_text = f"Gruppaga qoshuluu shiltemesi: \n👥[oQush]({sheet_url})"
     
     await message.answer(
         response_text, 
