@@ -104,9 +104,9 @@ async def handle_inline_query(query: InlineQuery, database: DatabaseManager):
             # the id so chosen_inline_result can log them with zero re-parsing.
             id=f"{book['book_id']}:{pages}",
             title=f"📖 {book['title']}",
-            description=f"{pages} bet => jiberüü üchün basyŋyz",
+            description=f"{pages} bet?",
             input_message_content=InputTextMessageContent(
-                message_text=f"{random.choice(EMOJIS)}{full_name}:\n\n «{book['title']}», {pages} bet"
+                message_text=f"{random.choice(EMOJIS)}\n{full_name}:\n «{book['title']}», {pages} bet"
             )
         )
         for book in books[:50]  # Telegram inline result cap
