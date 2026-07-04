@@ -1,3 +1,4 @@
+import random
 from aiogram import Router
 from aiogram.types import (
     InlineQuery, ChosenInlineResult,
@@ -7,6 +8,22 @@ from database.db import DatabaseManager
 
 router = Router()
 
+EMOJIS = [
+    "🪐", "🧿", "🦑", "🫧", "🧬", "🔮", "🐙", "🦖", "🧊", "🪄",
+    "🧨", "🎭", "🪬", "🥽", "🦴", "🛸", "🧵", "🦠", "🐌", "🦦",
+    "🪼", "🦤", "🫥", "🧻", "🪸", "🫠", "🫡", "🫨", "🪩", "🪫",
+    "🧌", "👽", "🛰️", "🌋", "🕸️", "🦂", "🐡", "🦔", "🦩", "🦭",
+    "🦨", "🦡", "🦎", "🦈", "🪳", "🪲", "🪱", "🍄", "🔭", "🧫",
+    "🦫", "🦥", "🦧", "🐊", "🐗", "🪶", "🧟", "🧛", "🧙", "🧚",
+    "🧞", "🐉", "🦕", "🐲", "🌌", "🌠", "☄️", "🪨", "🧱", "🗿",
+    "🎱", "🪅", "🎪", "🎡", "🎢", "🕹️", "🧩", "🪀", "🪁", "🧪",
+    "⚗️", "🔬", "🧲", "🪤", "🪠", "🧯", "📡", "👾", "🤖", "🎃",
+    "👻", "💀", "☠️", "🫀", "🫁", "🦷", "👁️", "🧠", "🐢", "🦃",
+    "<(*.*)>", "(╯°□°)╯", "ヽ(´▽`)/", "٩(◕‿◕｡)۶", "(⌐■_■)",
+    "ヾ(≧▽≦*)o", "(づ｡◕‿‿◕｡)づ", "(ノ°ο°)ノ",
+    ":)", "^_^", ":3", ":D", ":P", ";)", ":O", "xD",
+    "o_O", "-_-", ":|", ">:)", ":-)", "8)", ":]",
+]
 
 @router.inline_query()
 async def handle_inline_query(query: InlineQuery, database: DatabaseManager):
@@ -89,7 +106,7 @@ async def handle_inline_query(query: InlineQuery, database: DatabaseManager):
             title=f"📖 {book['title']}",
             description=f"{pages} bet => jiberüü üchün basyŋyz",
             input_message_content=InputTextMessageContent(
-                message_text=f"{full_name}: «{book['title']}», {pages} bet"
+                message_text=f"{random.choice(EMOJIS)}{full_name}:\n\n «{book['title']}», {pages} bet"
             )
         )
         for book in books[:50]  # Telegram inline result cap
