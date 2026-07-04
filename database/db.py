@@ -89,6 +89,15 @@ class UserBooksRepository(BaseRepository):
                 "UPDATE user_books SET is_active = FALSE, finished_at = NOW() WHERE user_id = $1 AND book_id = $2",
                 user_id, book_id
             )
+    async def delete(self, user_id: int, book_id: int):
+        """Removes the book from this user's list entirely.
+        reading_logs has no FK back to user_books, so past history
+        (and the Sheets export built from it) stays intact."""
+        async with self._pool.acquire() as connection:
+            await connection.execute(
+                "DELETE FROM user_books WHERE user_id = $1 AND book_id = $2",
+                user_id, book_id
+            )
 
 class LogRepository(BaseRepository):
     """

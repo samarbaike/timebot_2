@@ -55,23 +55,21 @@ async def process_name(message: Message, state: FSMContext, database: DatabaseMa
 async def trigger_log_page(message: Message, state: FSMContext, database: DatabaseManager):
     books = await database.user_books.get(message.from_user.id)
     if not books:
-        await message.answer("Qaisy kitepti oqudunuz? Atyn zhazyŋyz:")
-        await state.set_state(ReadingTracker.add_book)
-    else:
-        keyboard = build_books_keyboard(books)
-        await message.answer("Qaisy kitepti oquduŋuz?", reply_markup=keyboard)
-        await state.set_state(ReadingTracker.choose_book)
+        await message.answer(
+            "Sizde ali kitep zhoqqen⛔\n\n"
+            "Aldyn 'Kitepterimdi bashqaruu📚' bölümünön zhaŋy kitep qoshuŋuz."
+        )
+        return
+    keyboard = build_books_keyboard(books)
+    await message.answer("Qaisy kitepti oquduŋuz?", reply_markup=keyboard)
+    await state.set_state(ReadingTracker.choose_book)
 
-@router.callback_query(ReadingTracker.choose_book)
+@router.callback_query(ReadingTracker.choose_book, F.data.startswith("book:"))
 async def process_book_choice(callback: CallbackQuery, state: FSMContext, database: DatabaseManager):
-    if callback.data == "add_new_book":
-        await callback.message.answer("Zhaŋy kiteptin atyn zhazyŋyz:")
-        await state.set_state(ReadingTracker.add_book)
-    else:
-        book_id = int(callback.data.split(":")[1])  # "book:42" → 42
-        await state.update_data(book_id=book_id)
-        await callback.message.answer("Qancha bet oquduŋuz?")
-        await state.set_state(ReadingTracker.log_page)
+    book_id = int(callback.data.split(":")[1])  # "book:42" → 42
+    await state.update_data(book_id=book_id)
+    await callback.message.answer("Qancha bet oquduŋuz?")
+    await state.set_state(ReadingTracker.log_page)
     await callback.answer()  # clears the loading spinner on the button
 
 @router.message(ReadingTracker.add_book)
@@ -83,7 +81,7 @@ async def process_new_book(message: Message, state: FSMContext, database: Databa
             "❌ Kitep aty tuura emes.\n\n"
             "📚 Taza atyn jazyŋyz (misaly: Atomic Habits)"
         )
-        return  # stay in same state
+        return
 
     if not title:
         await message.answer("❌ Kitap aty tuura emes. Qayra jazyŋyz.")
@@ -92,12 +90,12 @@ async def process_new_book(message: Message, state: FSMContext, database: Databa
     book_id = await database.books.add(title)
     await database.user_books.add(message.from_user.id, book_id)
 
-    await state.update_data(book_id=book_id)
     await message.answer(
-        f"📖 '{title}' kitep tizmeŋizge qoshuldu!\n\n"
-        "Qancha bet oquduŋuz?"
+        f"📖 '{title}' kitebi tizmeŋizge qoshuldu!",
+        reply_markup=main_keyboard
     )
-    await state.set_state(ReadingTracker.log_page)
+    await state.clear()
+
 
 @router.message(ReadingTracker.log_page)
 async def process_page(message: Message, state: FSMContext, database: DatabaseManager):
