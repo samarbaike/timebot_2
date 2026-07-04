@@ -20,7 +20,7 @@ async def handle_inline_query(query: InlineQuery, database: DatabaseManager):
             title="❌ Sistemada zhokkens",
             description="Bottun zheke qatyna zhazyp, qattalynyz",
             input_message_content=InputTextMessageContent(
-                message_text="❌ Men qattalbapmyn. Botqo zhazuum kerek."
+                message_text="❌ Men qattalbapmyn."
             )
         )], cache_time=0)
         return
@@ -31,7 +31,7 @@ async def handle_inline_query(query: InlineQuery, database: DatabaseManager):
         await query.answer([InlineQueryResultArticle(
             id="hint",
             title=f"👋 {full_name}",
-            description="Aldyn bet sanyn jazyp, andan kiyin vergul koyuŋuz",
+            description="Algach BET sanyn zhazyp, andan kiyin ÜTÜR koyuŋuz",
             input_message_content=InputTextMessageContent(
                 message_text="Misaly: 45, Harry Potter"
             )
@@ -46,9 +46,9 @@ async def handle_inline_query(query: InlineQuery, database: DatabaseManager):
         await query.answer([InlineQueryResultArticle(
             id="bad_pages",
             title="❌ Bet sany galaty",
-            description="Verguldön murun oŋ bütün san jazyŋyz — misaly: 45, Harry Potter",
+            description="Ütürdön murun oŋ bütün san jazyŋyz — misaly: 45, Harry Potter",
             input_message_content=InputTextMessageContent(
-                message_text="❌ Bet sany galaty"
+                message_text="❌ Bet sany GALATY"
             )
         )], cache_time=0)
         return
@@ -60,7 +60,7 @@ async def handle_inline_query(query: InlineQuery, database: DatabaseManager):
         await query.answer([InlineQueryResultArticle(
             id="no_books",
             title="⛔ Sizde ali kitep zhoq",
-            description="Aldyn 'Kitepterimdi bashqaruu📚' bölümünön kitep qoshuŋuz",
+            description="Algach 'Kitepterimdi bashqaruu📚' bölümünön kitep qoshuŋuz",
             input_message_content=InputTextMessageContent(
                 message_text="⛔ Ali kitebim zhoq"
             )
@@ -87,9 +87,9 @@ async def handle_inline_query(query: InlineQuery, database: DatabaseManager):
             # the id so chosen_inline_result can log them with zero re-parsing.
             id=f"{book['book_id']}:{pages}",
             title=f"📖 {book['title']}",
-            description=f"{pages} bet retinde jiberüü üchün basyŋyz",
+            description=f"{pages} bet => jiberüü üchün basyŋyz",
             input_message_content=InputTextMessageContent(
-                message_text=f"{full_name}: {book['title']}, {pages} bet"
+                message_text=f"{full_name}: «{book['title']}», {pages} bet"
             )
         )
         for book in books[:50]  # Telegram inline result cap
