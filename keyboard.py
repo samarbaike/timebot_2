@@ -18,7 +18,7 @@ main_keyboard = ReplyKeyboardMarkup(
 def build_books_keyboard(books) -> InlineKeyboardMarkup:
     """Book picker used ONLY for logging pages read.
     No 'add new book' entry here anymore — that lives under
-    'Kitepterimdi bashqaruu📚' -> 'Zhaŋy kitep qosuu'."""
+    'Kitepterimdi bashqaruu📚' -> 'Zhaŋy kitep qoshuu'."""
     buttons = []
     for book in books:
         buttons.append([InlineKeyboardButton(
@@ -33,7 +33,7 @@ def build_manage_books_menu_keyboard() -> InlineKeyboardMarkup:
     buttons = [
         [InlineKeyboardButton(text="🗑 Kitep öchürüü", callback_data="manage_delete")],
         [InlineKeyboardButton(text="✅ Kitepti bütürüü", callback_data="manage_finish")],
-        [InlineKeyboardButton(text="➕ Zhaŋy kitep qosuu", callback_data="manage_add")],
+        [InlineKeyboardButton(text="➕ Zhaŋy kitep qoshuu", callback_data="manage_add")],
     ]
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
