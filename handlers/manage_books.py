@@ -88,7 +88,7 @@ async def delete_book(callback: CallbackQuery, database: DatabaseManager):
 async def finish_book(callback: CallbackQuery, database: DatabaseManager):
     book_id = int(callback.data.split(":")[1])
     title = _pressed_button_text(callback)
-    await database.user_books.finished(callback.from_user.id, book_id)
+    await database.user_books.finish(callback.from_user.id, book_id)
     await callback.message.edit_text(
         f"✅ '{title}' kitebi bütkön dep belgilendi!", reply_markup=None
     )
