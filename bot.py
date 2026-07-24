@@ -115,7 +115,7 @@ async def main():
     
     # TODO: CHANGE THESE NUMBERS FOR YOUR TEST RUN
     test_hour = 0
-    test_minute = 30 # Set this to 2 minutes from your current local time
+    test_minute = 0 # Set this to 2 minutes from your current local time
     
     scheduler.add_job(
         run_midnight_export, 
