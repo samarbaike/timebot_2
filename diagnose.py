@@ -1,51 +1,79 @@
 """
-Quick diagnostic — run this once, standalone, to check:
-1. What allowed_updates aiogram will actually request based on your routers
-2. Whether there's a leftover webhook still registered (which SILENTLY
-   blocks all polling — bot.py's dp.start_polling() would just hang/get
-   nothing, with no error, if a webhook URL is still set on Telegram's side)
+Diagnose why the midnight Sheets export isn't picking up rows that clearly
+exist in reading_logs.
+
+Checks, in order:
+1. Which active groups actually have a spreadsheet configured (/setsheet).
+2. For each of those groups, how many reading_logs rows get_for_group()
+   would actually return.
+3. Whether there are users with logged pages but group_id = NULL — these
+   rows exist in reading_logs but are invisible to the export's
+   `WHERE u.group_id = $1` filter.
 
 Usage:
-    python3 diagnose.py
+    python3 diagnose_export.py
 """
 import asyncio
-from aiogram import Bot, Dispatcher
-from config import BOT_TOKEN
-from handlers.start import router
-from handlers.groups import router as groups_router
-from handlers.inline import router as inline_router
-from handlers.manage_books import router as manage_books_router
+import os
+from dotenv import load_dotenv
+import asyncpg
+
+load_dotenv()
+DB_URL = os.getenv("DB_URL")
 
 
 async def main():
-    bot = Bot(token=BOT_TOKEN)
-    dp = Dispatcher()
-    dp.include_router(router)
-    dp.include_router(groups_router)
-    dp.include_router(inline_router)
-    dp.include_router(manage_books_router)
+    pool = await asyncpg.create_pool(DB_URL)
+    async with pool.acquire() as conn:
 
-    # 1. What update types will aiogram actually ask Telegram for?
-    allowed = dp.resolve_used_update_types()
-    print("=== allowed_updates aiogram will request ===")
-    print(allowed)
-    if "my_chat_member" not in allowed:
-        print("!! 'my_chat_member' is NOT in this list — that's the bug.")
-    else:
-        print("OK: 'my_chat_member' is included.")
+        print("=== Active groups with a spreadsheet configured ===")
+        groups = await conn.fetch("""
+            SELECT group_id, title, spreadsheet_id
+            FROM groups
+            WHERE is_active = TRUE AND spreadsheet_id IS NOT NULL
+        """)
+        if not groups:
+            print("!! No active group has a spreadsheet set — run /setsheet first.")
+            print("!! (this alone would explain zero export activity)")
+        for g in groups:
+            print(f"   group_id={g['group_id']}  title={g['title']!r}  spreadsheet_id={g['spreadsheet_id']}")
 
-    # 2. Is a webhook still set? If so, polling silently gets nothing.
-    print("\n=== webhook info ===")
-    info = await bot.get_webhook_info()
-    print(info)
-    if info.url:
-        print(f"!! A webhook is still registered at: {info.url}")
-        print("!! This blocks getUpdates()/polling from receiving ANYTHING.")
-        print("!! Fix: await bot.delete_webhook(drop_pending_updates=True)")
-    else:
-        print("OK: no webhook set, polling should work.")
+        total_logs = await conn.fetchval("SELECT COUNT(*) FROM reading_logs")
+        print(f"\nTotal rows in reading_logs: {total_logs}")
 
-    await bot.session.close()
+        print("\n=== Rows get_for_group() would actually export, per group ===")
+        for g in groups:
+            gid = g['group_id']
+            picked_up = await conn.fetchval("""
+                SELECT COUNT(*)
+                FROM users u
+                JOIN reading_logs r ON u.telegram_id = r.user_id
+                WHERE u.group_id = $1
+            """, gid)
+            flag = "" if picked_up else "   !! zero rows, but group has a sheet set"
+            print(f"   group_id={gid} ({g['title']}): {picked_up} rows{flag}")
+
+        print("\n=== Users who logged pages but have group_id = NULL ===")
+        orphaned = await conn.fetch("""
+            SELECT u.telegram_id, u.user_name, u.user_surname, COUNT(r.log_id) AS log_count
+            FROM users u
+            JOIN reading_logs r ON u.telegram_id = r.user_id
+            WHERE u.group_id IS NULL
+            GROUP BY u.telegram_id, u.user_name, u.user_surname
+        """)
+        if orphaned:
+            print(f"!! Found {len(orphaned)} user(s) with logged pages but no group_id:")
+            for row in orphaned:
+                print(f"   {row['user_name']} {row['user_surname']} (id={row['telegram_id']}): {row['log_count']} log(s)")
+            print("\n!! These rows exist in reading_logs but get_for_group() will never")
+            print("!! return them (INNER JOIN on u.group_id = $1 excludes NULLs).")
+            print("!! Fix: have these users send /start again to trigger the backfill")
+            print("!! in handlers/start.py, or backfill directly, e.g.:")
+            print("!!   UPDATE users SET group_id = <group_id> WHERE telegram_id = <id>;")
+        else:
+            print("OK: every user with logged pages already has a group_id set.")
+
+    await pool.close()
 
 
 if __name__ == "__main__":

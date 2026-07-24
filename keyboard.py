@@ -5,27 +5,12 @@ from aiogram.types import (
 
 main_keyboard = ReplyKeyboardMarkup(
     keyboard=[
-        [KeyboardButton(text="Bet kirgizüü📖")],
         [KeyboardButton(text="Kitepterimdi bashqaruu📚")],
-        [KeyboardButton(text="Zhalpy📈"), KeyboardButton(text="Meniki👤")],   # NEW
-        [KeyboardButton(text="Gruppaga qoshuluu 👥")]
+        [KeyboardButton(text="Zhalpy📈"), KeyboardButton(text="Meniki👤")]
     ],
     resize_keyboard=True,
     input_field_placeholder="Emne qylaly..."
 )
-
-
-def build_books_keyboard(books) -> InlineKeyboardMarkup:
-    """Book picker used ONLY for logging pages read.
-    No 'add new book' entry here anymore — that lives under
-    'Kitepterimdi bashqaruu📚' -> 'Zhaŋy kitep qoshuu'."""
-    buttons = []
-    for book in books:
-        buttons.append([InlineKeyboardButton(
-            text=book['title'],
-            callback_data=f"book:{book['book_id']}"
-        )])
-    return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
 def build_manage_books_menu_keyboard() -> InlineKeyboardMarkup:

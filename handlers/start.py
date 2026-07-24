@@ -1,11 +1,11 @@
 from aiogram import F
 from aiogram import Router
 from aiogram.filters import CommandStart
-from aiogram.types import Message, LinkPreviewOptions, CallbackQuery
+from aiogram.types import Message, LinkPreviewOptions
 from aiogram.fsm.context import FSMContext
 from services.states import ReadingTracker
 from database.db import DatabaseManager
-from keyboard import main_keyboard, build_books_keyboard
+from keyboard import main_keyboard
 from aiogram.enums import ChatType
 from aiogram.exceptions import TelegramBadRequest
 import re
@@ -59,7 +59,7 @@ async def cmd_start(message: Message, state: FSMContext, database: DatabaseManag
             await message.answer(
                 "❌ Kechiresiz, siz bottun eç bir gruppasynda tabylbadyŋyz.\n\n"
                 "Bul bot tek gana klubdun gruppalaryna qatyshqan oqurmandar üchün.\n"
-                "Aldy menen tiiştüü gruppaga qoshuluŋuz, andan kiyin kaira /start basyŋyz."
+                "Aldy menen tiiştüü gruppaga qoshuluŋuz, andan kiyin qaira /start basyŋyz."
             )
             return
         await state.update_data(group_id=group_id)
@@ -89,27 +89,6 @@ async def process_name(message: Message, state: FSMContext, database: DatabaseMa
         await message.answer("Suranych atyŋyzdy talaptagydai kirgiziŋiz☢️")
     
 
-@router.message(F.text == "Bet kirgizüü📖")
-async def trigger_log_page(message: Message, state: FSMContext, database: DatabaseManager):
-    books = await database.user_books.get(message.from_user.id)
-    if not books:
-        await message.answer(
-            "Sizde ali kitep zhoqqen⛔\n\n"
-            "Aldyn 'Kitepterimdi bashqaruu📚' bölümünön zhaŋy kitep qoshuŋuz."
-        )
-        return
-    keyboard = build_books_keyboard(books)
-    await message.answer("Qaisy kitepti oquduŋuz?", reply_markup=keyboard)
-    await state.set_state(ReadingTracker.choose_book)
-
-@router.callback_query(ReadingTracker.choose_book, F.data.startswith("book:"))
-async def process_book_choice(callback: CallbackQuery, state: FSMContext, database: DatabaseManager):
-    book_id = int(callback.data.split(":")[1])  # "book:42" → 42
-    await state.update_data(book_id=book_id)
-    await callback.message.answer("Qancha bet oquduŋuz?")
-    await state.set_state(ReadingTracker.log_page)
-    await callback.answer()  # clears the loading spinner on the button
-
 @router.message(ReadingTracker.add_book)
 async def process_new_book(message: Message, state: FSMContext, database: DatabaseManager):
     title = message.text.strip()
@@ -122,7 +101,7 @@ async def process_new_book(message: Message, state: FSMContext, database: Databa
         return
 
     if not title:
-        await message.answer("❌ Kitap aty tuura emes. Qayra jazyŋyz.")
+        await message.answer("❌ Kitep aty tuura emes. Qayra jazyŋyz.")
         return
 
     book_id = await database.books.add(title)
@@ -134,18 +113,6 @@ async def process_new_book(message: Message, state: FSMContext, database: Databa
     )
     await state.clear()
 
-
-@router.message(ReadingTracker.log_page)
-async def process_page(message: Message, state: FSMContext, database: DatabaseManager):
-    if message.text.isdigit() and int(message.text) > 0 and int(message.text) < 1000:
-        pages = int(message.text)
-        data = await state.get_data()
-        book_id = data['book_id']
-        await database.logs.add(message.from_user.id, book_id, pages)
-        await message.answer(f"Zharait, {pages} bet bügüngö koshup koidum👌")
-        await state.clear()
-    else:
-        await message.answer("Suranych durus bir bet sanyn zhazyŋyz☢️")
 
 @router.message(F.text == "Meniki👤")
 async def show_progress(message: Message, database: DatabaseManager):
@@ -168,8 +135,8 @@ async def hyperlink(message: Message, database: DatabaseManager):
 
     if group is None or not group['sheet_url']:
         await message.answer(
-            "❌ Sizdin gruppaŋyzdyn sheet-i ali ornotulgan emes.\n\n"
-            "Gruppa adminine kayryluŋuz — al /setsheet buirugun colondonushu kerek."
+            "❌ Sizdin gruppaŋyzdyn ali google sheet'i ornotula elek.\n\n"
+            "Gruppa adminine qayrylyŋyz — al /setsheet buirugun qoldonup ornotushu kk."
         )
         return
 
@@ -179,16 +146,5 @@ async def hyperlink(message: Message, database: DatabaseManager):
     await message.answer(
         response_text,
         parse_mode="Markdown",
-        link_preview_options=LinkPreviewOptions(is_disabled=True)
-    )
-
-@router.message(F.text == "Gruppaga qoshuluu 👥")
-async def hyperlink(message: Message):
-    sheet_url = "https://t.me/+mYguvPw7CopiODEy"
-    response_text = f"Gruppaga qoshuluu shiltemesi: \n👥[gruppa]({sheet_url})"
-    
-    await message.answer(
-        response_text, 
-        parse_mode="Markdown", 
         link_preview_options=LinkPreviewOptions(is_disabled=True)
     )
