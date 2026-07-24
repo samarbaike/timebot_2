@@ -25,12 +25,12 @@ class UserRepository(BaseRepository):
     """
     Inherits from BaseRepository, managin users table
     """
-    async def add(self, telegram_id: int, user_name: str, user_surname: str):
+    async def add(self, telegram_id: int, user_name: str, user_surname: str, group_id: int | None = None):
         query="""
-        INSERT INTO users (telegram_id, user_name, user_surname) VALUES ($1, $2, $3)
+        INSERT INTO users (telegram_id, user_name, user_surname, group_id) VALUES ($1, $2, $3, $4)
         """
         async with self._pool.acquire() as connection:
-            await connection.execute(query, telegram_id, user_name, user_surname)
+            await connection.execute(query, telegram_id, user_name, user_surname, group_id)
     async def get(self, telegram_id:int):
         query = """
         SELECT telegram_id FROM users WHERE telegram_id=$1"""
@@ -41,9 +41,90 @@ class UserRepository(BaseRepository):
     async def get_full(self, telegram_id: int):
         async with self._pool.acquire() as conn:
             return await conn.fetchrow(
-                "SELECT telegram_id, user_name, user_surname FROM users WHERE telegram_id = $1",
+                "SELECT telegram_id, user_name, user_surname, group_id FROM users WHERE telegram_id = $1",
                 telegram_id
             )
+    async def set_group(self, telegram_id: int, group_id: int):
+        """Links (or re-links) a user to the group they were matched against.
+        Used both at registration time and to backfill legacy users who
+        registered before group-matching existed."""
+        async with self._pool.acquire() as connection:
+            await connection.execute(
+                "UPDATE users SET group_id = $2 WHERE telegram_id = $1",
+                telegram_id, group_id
+            )
+
+class GroupRepository(BaseRepository):
+    """
+    Inherits from BaseRepository, managing the groups table.
+    A "group" here is a Telegram group chat the bot has been added to.
+    Each group can optionally have its own Google Sheet configured for
+    the midnight export.
+    """
+    async def add(self, group_id: int, title: str):
+        """Registers a group the bot was just added to. If the bot had
+        previously been kicked/left and is now re-added, this reactivates
+        the existing row (and its spreadsheet link) instead of losing it."""
+        async with self._pool.acquire() as connection:
+            await connection.execute("""
+                INSERT INTO groups (group_id, title, is_active)
+                VALUES ($1, $2, TRUE)
+                ON CONFLICT (group_id) DO UPDATE
+                    SET title = EXCLUDED.title, is_active = TRUE
+                """, group_id, title)
+
+    async def get(self, group_id: int):
+        async with self._pool.acquire() as connection:
+            return await connection.fetchrow(
+                "SELECT group_id, title, spreadsheet_id, sheet_url, is_active FROM groups WHERE group_id = $1",
+                group_id
+            )
+
+    async def get_all_active(self):
+        """All groups the bot currently believes it's still a member of.
+        Used to check a user's membership against each one."""
+        async with self._pool.acquire() as connection:
+            return await connection.fetch(
+                "SELECT group_id, title, spreadsheet_id, sheet_url FROM groups WHERE is_active = TRUE"
+            )
+
+    async def get_all_with_sheet(self):
+        """Active groups that have a spreadsheet configured — the only ones
+        the midnight export job needs to touch."""
+        async with self._pool.acquire() as connection:
+            return await connection.fetch("""
+                SELECT group_id, title, spreadsheet_id, sheet_url
+                FROM groups
+                WHERE is_active = TRUE AND spreadsheet_id IS NOT NULL
+                """)
+
+    async def get_by_user(self, telegram_id: int):
+        """The group a specific user is currently linked to, if any."""
+        async with self._pool.acquire() as connection:
+            return await connection.fetchrow("""
+                SELECT g.group_id, g.title, g.spreadsheet_id, g.sheet_url
+                FROM groups g
+                JOIN users u ON u.group_id = g.group_id
+                WHERE u.telegram_id = $1
+                """, telegram_id)
+
+    async def set_spreadsheet(self, group_id: int, spreadsheet_id: str, sheet_url: str):
+        async with self._pool.acquire() as connection:
+            await connection.execute(
+                "UPDATE groups SET spreadsheet_id = $2, sheet_url = $3 WHERE group_id = $1",
+                group_id, spreadsheet_id, sheet_url
+            )
+
+    async def deactivate(self, group_id: int):
+        """Called when the bot is kicked or leaves the group — keeps the row
+        (and its spreadsheet link) around in case it's re-added later, but
+        stops it from being offered as a match or exported to."""
+        async with self._pool.acquire() as connection:
+            await connection.execute(
+                "UPDATE groups SET is_active = FALSE WHERE group_id = $1",
+                group_id
+            )
+
 
 class BookRepository(BaseRepository):
     async def add(self, title: str) -> int:
@@ -131,6 +212,7 @@ class ReportRepository(BaseRepository):
         async with self._pool.acquire() as connection:
             return await connection.fetch("""
                 SELECT 
+                    u.group_id,
                     CONCAT(u.user_name, ' ', u.user_surname) AS full_name,
                     b.title,
                     r.log_date,
@@ -138,9 +220,28 @@ class ReportRepository(BaseRepository):
                 FROM users u
                 INNER JOIN reading_logs r ON u.telegram_id = r.user_id
                 INNER JOIN books b ON r.book_id = b.book_id
-                GROUP BY CONCAT(u.user_name, ' ', u.user_surname), b.title, r.log_date
+                GROUP BY u.group_id, CONCAT(u.user_name, ' ', u.user_surname), b.title, r.log_date
                 ORDER BY r.log_date
                 """)
+
+    async def get_for_group(self, group_id: int):
+        """Same shape as get(), scoped to a single group's users. Used by the
+        midnight export so each group's spreadsheet only shows its own data."""
+        async with self._pool.acquire() as connection:
+            return await connection.fetch("""
+                SELECT
+                    u.group_id,
+                    CONCAT(u.user_name, ' ', u.user_surname) AS full_name,
+                    b.title,
+                    r.log_date,
+                    SUM(r.pages_read) AS pages_read
+                FROM users u
+                INNER JOIN reading_logs r ON u.telegram_id = r.user_id
+                INNER JOIN books b ON r.book_id = b.book_id
+                WHERE u.group_id = $1
+                GROUP BY u.group_id, CONCAT(u.user_name, ' ', u.user_surname), b.title, r.log_date
+                ORDER BY r.log_date
+                """, group_id)
 
 class DatabaseManager:
     def __init__(self):
@@ -152,6 +253,7 @@ class DatabaseManager:
         self.migration: ReportRepository | None = None
         self.books: BookRepository | None = None
         self.user_books: UserBooksRepository | None = None
+        self.groups: GroupRepository | None = None
 
     async def connect(self, db_url: str):
         self.pool = await asyncpg.create_pool(db_url)
@@ -161,18 +263,36 @@ class DatabaseManager:
         self.migration = ReportRepository(self.pool)
         self.books = BookRepository(self.pool)
         self.user_books = UserBooksRepository(self.pool)
+        self.groups = GroupRepository(self.pool)
 
     
     async def create_table(self):
         async with self.pool.acquire() as connection:
+            # groups must exist before users, since users.group_id references it
+            await connection.execute("""
+                CREATE TABLE IF NOT EXISTS groups (
+                    group_id BIGINT PRIMARY KEY,
+                    title TEXT,
+                    spreadsheet_id TEXT,
+                    sheet_url TEXT,
+                    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                    added_at TIMESTAMP DEFAULT NOW()
+                )
+            """)
             await connection.execute("""
                 CREATE TABLE IF NOT EXISTS users (
                     telegram_id BIGINT PRIMARY KEY,
                     user_name TEXT NOT NULL,
                     user_surname TEXT NOT NULL,
+                    group_id BIGINT REFERENCES groups(group_id),
                     joined_at TIMESTAMP DEFAULT NOW()
                 ) 
             """)
+            # Backfill for deployments where users already existed before
+            # group_id was introduced.
+            await connection.execute(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS group_id BIGINT REFERENCES groups(group_id)"
+            )
             await connection.execute("""
                 CREATE TABLE IF NOT EXISTS books (
                     book_id SERIAL PRIMARY KEY,

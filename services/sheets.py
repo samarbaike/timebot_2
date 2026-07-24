@@ -9,11 +9,14 @@ load_dotenv()
 
 class GoogleSheetManager:
     def __init__(self):
-        # 1. Load the JSON string from the environment and parse it back into a dictionary
+        # 1. Load the JSON string from the environment and parse it back into a dictionary.
+        # Note: there is no longer a single global SPREADSHEET_ID here — each group has
+        # its own spreadsheet_id (set via /setsheet, stored in the groups table), and
+        # upload_both_tabs() below now takes the target spreadsheet_id as an argument
+        # so one GoogleSheetManager instance can be reused across every group's export.
         creds_json = os.getenv("GOOGLE_CREDS_JSON")
-        self.spreadsheet_id = os.getenv("SPREADSHEET_ID")
-        
-        if not creds_json or not self.spreadsheet_id:
+
+        if not creds_json:
             raise ValueError("Missing Google Credentials in .env")
 
         creds_dict = json.loads(creds_json)
@@ -27,6 +30,14 @@ class GoogleSheetManager:
         # 3. Authenticate and create the client
         credentials = Credentials.from_service_account_info(creds_dict, scopes=scopes)
         self.client = gspread.authorize(credentials)
+        self.client_email = creds_dict.get("client_email")
+
+    def check_access(self, spreadsheet_id: str):
+        """Verifies the service account can open this spreadsheet, without
+        writing anything. Used by /setsheet at setup time so a missing share
+        is caught immediately instead of at the next midnight export.
+        Raises gspread.exceptions.SpreadsheetNotFound or APIError on failure."""
+        self.client.open_by_key(spreadsheet_id)
 
     def _get_or_create_sheet(self, spreadsheet, title: str):
         try:
@@ -52,8 +63,8 @@ class GoogleSheetManager:
         rows = df.values.tolist()
         worksheet.update(values=[headers] + rows, range_name='A1')
 
-    def upload_both_tabs(self, df):
-        spreadsheet = self.client.open_by_key(self.spreadsheet_id)
+    def upload_both_tabs(self, df, spreadsheet_id: str):
+        spreadsheet = self.client.open_by_key(spreadsheet_id)
 
     # --- Tab 1: daily progress ---
         df['log_date'] = df['log_date'].apply(

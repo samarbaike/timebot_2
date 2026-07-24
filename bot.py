@@ -35,32 +35,50 @@ async def health_check(request):
 
 # ---- THE ETL BRIDGE PIPELINE ----
 async def run_midnight_export(db: DatabaseManager):
-    """Executes the scheduled ETL pipeline to Google Sheets."""
+    """Executes the scheduled ETL pipeline to Google Sheets, once per group.
+    Each group has its own spreadsheet (configured via /setsheet), so this
+    loops over every active group that has one set and exports that group's
+    data only — no more dumping every group's logs into one shared sheet."""
     logging.info("Initiating scheduled Google Sheets export...")
+
+    groups = await db.groups.get_all_with_sheet()
+    if not groups:
+        logging.info("Export aborted: no groups have a spreadsheet configured yet.")
+        return
+
+    # One authenticated client is reused across every group's export.
     try:
-        # 1. EXTRACT (From db.py)
-        raw_records = await db.migration.get()
-        data = [dict(record) for record in raw_records]
-        
-        if not data:
-            logging.info("Export aborted: Database is empty.")
-            return
-
-        # TRANSFORM
-        df = pd.DataFrame(data)
-
-        # Two separate pivots from the same raw data
-        # (date formatting happens inside upload_both_tabs)
-        df['log_date'] = pd.to_datetime(df['log_date'])
-
-        # LOAD
         sheet_manager = GoogleSheetManager()
-        sheet_manager.upload_both_tabs(df)
-        
-        logging.info("✅ Scheduled export successfully completed.")
-        
     except Exception as e:
-        logging.error(f"❌ FATAL ERROR during scheduled export: {e}")
+        logging.error(f"❌ FATAL ERROR setting up Google Sheets client: {e}")
+        return
+
+    for group in groups:
+        group_id = group['group_id']
+        try:
+            # 1. EXTRACT (From db.py), scoped to this group
+            raw_records = await db.migration.get_for_group(group_id)
+            data = [dict(record) for record in raw_records]
+
+            if not data:
+                logging.info(f"Skipping group {group_id} ({group['title']}): no reading logs yet.")
+                continue
+
+            # TRANSFORM
+            df = pd.DataFrame(data)
+            df['log_date'] = pd.to_datetime(df['log_date'])
+
+            # LOAD
+            sheet_manager.upload_both_tabs(df, group['spreadsheet_id'])
+
+            logging.info(f"✅ Export completed for group {group_id} ({group['title']}).")
+
+        except Exception as e:
+            # One group's failure (bad sheet ID, revoked sharing, etc.) shouldn't
+            # block the rest of the groups from exporting.
+            logging.error(f"❌ Export failed for group {group_id} ({group['title']}): {e}")
+
+    logging.info("Scheduled Google Sheets export run finished.")
 
 #--- WEB SERVER ---
 async def start_dummy_server():

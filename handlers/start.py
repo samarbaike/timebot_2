@@ -7,6 +7,7 @@ from services.states import ReadingTracker
 from database.db import DatabaseManager
 from keyboard import main_keyboard, build_books_keyboard
 from aiogram.enums import ChatType
+from aiogram.exceptions import TelegramBadRequest
 import re
 
 def contains_emoji(text: str) -> bool:
@@ -29,13 +30,48 @@ def contains_emoji(text: str) -> bool:
 
 router = Router()
 
+
+async def resolve_user_group(bot, database: DatabaseManager, user_id: int):
+    """Checks every group the bot currently belongs to and returns the
+    group_id the user is a member of, or None if they're in none of them.
+    Relies on handlers/groups.py keeping the groups table in sync with
+    which chats the bot is actually still a member of."""
+    groups = await database.groups.get_all_active()
+    for group in groups:
+        try:
+            member = await bot.get_chat_member(group['group_id'], user_id)
+        except TelegramBadRequest:
+            # User was never in this chat (most common case), or the bot
+            # otherwise can't see membership — just try the next group.
+            continue
+        if member.status in ("member", "administrator", "creator", "restricted"):
+            return group['group_id']
+    return None
+
+
 @router.message(CommandStart(), F.chat.type == ChatType.PRIVATE)
 async def cmd_start(message: Message, state: FSMContext, database: DatabaseManager):
     presence = await database.users.get_full(message.from_user.id)
-    if presence == None:
+
+    if presence is None:
+        group_id = await resolve_user_group(message.bot, database, message.from_user.id)
+        if group_id is None:
+            await message.answer(
+                "❌ Kechiresiz, siz bottun eç bir gruppasynda tabylbadyŋyz.\n\n"
+                "Bul bot tek gana klubdun gruppalaryna qatyshqan oqurmandar üchün.\n"
+                "Aldy menen tiiştüü gruppaga qoshuluŋuz, andan kiyin kaira /start basyŋyz."
+            )
+            return
+        await state.update_data(group_id=group_id)
         await message.answer("Arybaŋyz, zhash oqurman👋\n\n\nAtynyz kim?\n(atyŋyzdy Name Surname tartibinde latyn tamgalary menen berseŋiz sonun bolot,\n\n misaly Bekmyrza Alyshbeav zhe Bekmyrza Samarbek uulu degendei)")
         await state.set_state(ReadingTracker.user_name)
     else:
+        # Legacy users who registered before group-matching existed won't
+        # have a group_id yet — try to backfill it silently on this /start.
+        if presence['group_id'] is None:
+            group_id = await resolve_user_group(message.bot, database, message.from_user.id)
+            if group_id is not None:
+                await database.users.set_group(message.from_user.id, group_id)
         await message.answer(f"{presence['user_name']}, sizdi kaira körgönü qubanychtamyn 🫰", reply_markup=main_keyboard)
 
 @router.message(ReadingTracker.user_name)
@@ -44,7 +80,9 @@ async def process_name(message: Message, state: FSMContext, database: DatabaseMa
     if len(provision)==2 or len(provision)==3:
         name = provision[0]
         surname = " ".join(provision[1:])
-        await database.users.add(message.from_user.id, name, surname)
+        data = await state.get_data()
+        group_id = data.get('group_id')
+        await database.users.add(message.from_user.id, name, surname, group_id)
         await message.answer(f"Qosh keldiŋiz, {name}🤍\n", reply_markup=main_keyboard)
         await state.clear()
     else:
@@ -125,20 +163,29 @@ async def show_progress(message: Message, database: DatabaseManager):
     await message.answer(response_text, parse_mode="Markdown")
 
 @router.message(F.text == "Zhalpy📈")
-async def hyperlink(message: Message):
-    sheet_url = "https://docs.google.com/spreadsheets/d/1jpV8B5rMd5FfNqMmrfxxShMfaZvLd1aDG-HdGIEtzoM/edit?usp=sharing"
-    response_text = f"Klubtun zhalpy zhyiyntyq shiltemesi: \n📊[TimeClub]({sheet_url})"
-    
+async def hyperlink(message: Message, database: DatabaseManager):
+    group = await database.groups.get_by_user(message.from_user.id)
+
+    if group is None or not group['sheet_url']:
+        await message.answer(
+            "❌ Sizdin gruppaŋyzdyn sheet-i ali ornotulgan emes.\n\n"
+            "Gruppa adminine kayryluŋuz — al /setsheet buirugun colondonushu kerek."
+        )
+        return
+
+    sheet_url = group['sheet_url']
+    response_text = f"Gruppaŋyzdyn zhyiyntyq shiltemesi: \n📊[zhalpy]({sheet_url})"
+
     await message.answer(
-        response_text, 
-        parse_mode="Markdown", 
+        response_text,
+        parse_mode="Markdown",
         link_preview_options=LinkPreviewOptions(is_disabled=True)
     )
 
 @router.message(F.text == "Gruppaga qoshuluu 👥")
 async def hyperlink(message: Message):
     sheet_url = "https://t.me/+mYguvPw7CopiODEy"
-    response_text = f"Gruppaga qoshuluu shiltemesi: \n👥[oQush]({sheet_url})"
+    response_text = f"Gruppaga qoshuluu shiltemesi: \n👥[gruppa]({sheet_url})"
     
     await message.answer(
         response_text, 
