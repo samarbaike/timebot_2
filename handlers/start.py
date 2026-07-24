@@ -93,10 +93,14 @@ async def process_name(message: Message, state: FSMContext, database: DatabaseMa
 async def process_new_book(message: Message, state: FSMContext, database: DatabaseManager):
     title = message.text.strip()
 
-    if contains_emoji(title):
+    def contains_quotes(text: str) -> bool:
+        quotes = ['"', "'", '«', '»', '“', '”', '‘', '’']
+        return any(q in text for q in quotes)
+
+    if contains_emoji(title) or contains_quotes(title):
         await message.answer(
             "❌ Kitep aty tuura emes.\n\n"
-            "📚 Taza atyn jazyŋyz (misaly: Atomic Habits)"
+            "📚 Taza atyn jazyŋyz, tyrnakchsyz (misaly: Atomic Habits)"
         )
         return
 
